@@ -1,0 +1,47 @@
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">CRUD Facturas</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+
+        @* Link a la pagina de inicio *@
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+
+        @* Links a las 6 tablas sin clave foranea *@
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="red">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Red
+            </NavLink>
+        </div>
+        @* 
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="beca">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Beca
+            </NavLink>
+        </div>
+        @* 
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="apoyoprofesoral">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Apoyo Profesoral
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="areaconocimiento">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Area de Conocimiento
+            </NavLink>
+        </div>
+        *@
+        
+    </nav>
+</div>
