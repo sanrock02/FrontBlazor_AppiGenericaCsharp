@@ -1,0 +1,227 @@
+@page "/evaluacion-docente"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<PageTitle>Evaluaciones de Docentes</PageTitle>
+
+<div class="container mt-4">
+    <h3>Gestión de Evaluaciones de Docentes</h3>
+
+    @* ───────── ALERTA ───────── *@
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <div class="alert @(exito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+            @mensaje
+            <button type="button" class="btn-close" @onclick="() => mensaje = string.Empty"></button>
+        </div>
+    }
+
+    @* ───────── BOTON PARA FORMULARIO ───────── *@
+    @if (!mostrarFormulario)
+    {
+        <button class="btn btn-primary mb-3" @onclick="NuevoRegistro">Nueva Evaluación</button>
+    }
+
+    @* ───────── FORMULARIO ───────── *@
+    @if (mostrarFormulario)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @(editando ? "Editar Evaluación" : "Nueva Evaluación")
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @if (editando)
+                    {
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ID</label>
+                            <input class="form-control" type="number" @bind="modelo.id" disabled="true" />
+                        </div>
+                    }
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Calificación</label>
+                        <input class="form-control" type="number" step="0.01" @bind="modelo.calificacion" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Semestre</label>
+                        <input class="form-control" @bind="modelo.semestre" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Docente *</label>
+                        <select class="form-select" @bind="modelo.docente">
+                            <option value="">-- Seleccionar Docente --</option>
+                            @foreach (var docente in listadoDocentes)
+                            {
+                                <option value="@docente["cedula"]">@docente["nombres"] @docente["apellidos"]</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-success me-2" @onclick="GuardarRegistro">Guardar</button>
+                <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    }
+
+    @* ───────── CARGA ───────── *@
+    @if (cargando)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    }
+
+    @* ───────── TABLA ───────── *@
+    @if (!cargando && registros.Any())
+    {
+        <table class="table table-striped table-hover table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Calificación</th>
+                    <th>Semestre</th>
+                    <th>Docente</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var reg in registros)
+                {
+                    <tr>
+                        <td>@reg["id"]</td>
+                        <td>@reg["calificacion"]</td>
+                        <td>@reg["semestre"]</td>
+                        <td>@ObtenerNombreDocente(Convert.ToInt32(reg["docente"]))</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarRegistro(reg)">
+                                Editar
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRegistro(reg)">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @* ───────── SIN DATOS ───────── *@
+    @if (!cargando && !registros.Any())
+    {
+        <div class="alert alert-warning">No se encontraron registros.</div>
+    }
+</div>
+
+@code {
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> listadoDocentes = new();
+    private bool cargando = true;
+    private bool mostrarFormulario = false;
+    private bool editando = false;
+    private string mensaje = string.Empty;
+    private bool exito = false;
+
+    private EvaluacionModel modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        registros = await Api.ListarAsync("evaluacion_docente", null);
+        listadoDocentes = await Api.ListarAsync("docente", null);
+        cargando = false;
+    }
+
+    private void NuevoRegistro()
+    {
+        modelo = new EvaluacionModel();
+        editando = false;
+        mostrarFormulario = true;
+    }
+
+    private void EditarRegistro(Dictionary<string, object?> reg)
+    {
+        modelo = new EvaluacionModel
+        {
+            id = Convert.ToInt32(reg["id"]),
+            calificacion = Convert.ToDouble(reg["calificacion"]),
+            semestre = reg["semestre"]?.ToString() ?? "",
+            docente = reg["docente"]?.ToString() ?? ""
+        };
+        editando = true;
+        mostrarFormulario = true;
+    }
+
+private async Task GuardarRegistro()
+    {
+        // 1. Creamos el diccionario con los campos que se pueden cambiar
+        var datos = new Dictionary<string, object?>
+        {
+            { "calificacion", modelo.calificacion },
+            { "semestre", modelo.semestre },
+            { "docente", int.Parse(modelo.docente) }
+        };
+
+        if (editando)
+        {
+            // IMPORTANTE: No agregamos el "id" al diccionario 'datos' 
+            // porque la API ya lo recibe en el parámetro modelo.id.ToString()
+            (exito, mensaje) = await Api.ActualizarAsync("evaluacion_docente", "id", modelo.id.ToString(), datos);
+        }
+        else
+        {
+            (exito, mensaje) = await Api.CrearAsync("evaluacion_docente", datos);
+        }
+
+        if (exito)
+        {
+            // Limpiamos el mensaje después de un éxito para que no confunda
+            var mensajeTemp = mensaje; 
+            Cancelar();
+            mensaje = mensajeTemp; 
+            await CargarDatos();
+        }
+    }
+
+    private async Task EliminarRegistro(Dictionary<string, object?> reg)
+    {
+        var id = Convert.ToInt32(reg["id"]);
+        if (!await ConfirmarEliminacion()) return;
+
+        (exito, mensaje) = await Api.EliminarAsync("evaluacion_docente", "id", id.ToString());
+        await CargarDatos();
+    }
+
+    private void Cancelar()
+    {
+        mostrarFormulario = false;
+        modelo = new EvaluacionModel();
+    }
+
+    private Task<bool> ConfirmarEliminacion() => Task.FromResult(true);
+
+    private string ObtenerNombreDocente(int cedula)
+    {
+        var docente = listadoDocentes.FirstOrDefault(d => Convert.ToInt32(d["cedula"]) == cedula);
+        if (docente != null)
+        {
+            return $"{docente["nombres"]} {docente["apellidos"]}";
+        }
+        return cedula.ToString();
+    }
+
+    private class EvaluacionModel
+    {
+        public int id { get; set; }
+        public double calificacion { get; set; }
+        public string semestre { get; set; } = "";
+        public string docente { get; set; } = "";
+    }
+}

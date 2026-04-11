@@ -147,6 +147,12 @@ namespace FrontBlazor_AppiGenericaCsharp.Services
         private List<Dictionary<string, object?>> ConvertirDatos(JsonElement datos)
         {
             var lista = new List<Dictionary<string, object?>>();
+<<<<<<< HEAD
+=======
+            
+            // Propiedades que se consideran fechas (por patrón de nombre)
+            var propiedadesFecha = new[] { "fecha", "date", "inicio", "fin", "created", "updated", "nacimiento", "inicio_vigencia", "fin_vigencia" };
+>>>>>>> 0fa103b (Subiendo mi proyecto terminado)
 
             foreach (var fila in datos.EnumerateArray())
             {
@@ -154,10 +160,20 @@ namespace FrontBlazor_AppiGenericaCsharp.Services
 
                 foreach (var propiedad in fila.EnumerateObject())
                 {
+<<<<<<< HEAD
                     // Convierte cada valor JSON a su tipo .NET correspondiente
                     diccionario[propiedad.Name] = propiedad.Value.ValueKind switch
                     {
                         JsonValueKind.String => propiedad.Value.GetString(),
+=======
+                    // Detectar si esta propiedad debería ser una fecha
+                    bool esFecha = propiedadesFecha.Any(p => propiedad.Name.ToLower().Contains(p));
+
+                    // Convierte cada valor JSON a su tipo .NET correspondiente
+                    diccionario[propiedad.Name] = propiedad.Value.ValueKind switch
+                    {
+                        JsonValueKind.String => ConvertirValorString(propiedad.Value.GetString(), esFecha),
+>>>>>>> 0fa103b (Subiendo mi proyecto terminado)
                         JsonValueKind.Number => propiedad.Value.TryGetInt32(out int i) ? i : propiedad.Value.GetDouble(),
                         JsonValueKind.True => true,
                         JsonValueKind.False => false,
@@ -171,5 +187,23 @@ namespace FrontBlazor_AppiGenericaCsharp.Services
 
             return lista;
         }
+<<<<<<< HEAD
+=======
+
+        // Convierte un valor string, detectando fechas si es necesario
+        private object? ConvertirValorString(string? valor, bool esFecha)
+        {
+            if (string.IsNullOrEmpty(valor))
+                return valor;
+
+            // Si es una fecha potencial, intenta convertir a DateTime
+            if (esFecha && DateTime.TryParse(valor, out DateTime fecha))
+            {
+                return fecha;
+            }
+
+            return valor;
+        }
+>>>>>>> 0fa103b (Subiendo mi proyecto terminado)
     }
 }

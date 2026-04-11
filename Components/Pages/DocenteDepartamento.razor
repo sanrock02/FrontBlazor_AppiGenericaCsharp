@@ -1,0 +1,224 @@
+@page "/docente-departamento"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<PageTitle>Docentes por Departamento</PageTitle>
+
+<div class="container mt-4">
+    <h3>Gestión de Docentes por Departamento</h3>
+
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <div class="alert @(exito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+            @mensaje
+            <button type="button" class="btn-close" @onclick="() => mensaje = string.Empty"></button>
+        </div>
+    }
+
+    @if (!mostrarFormulario)
+    {
+        <button class="btn btn-primary mb-3" @onclick="NuevoRegistro">Nuevo Registro</button>
+    }
+
+    @if (mostrarFormulario)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @(editando ? "Editar Registro" : "Nuevo Registro")
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Docente *</label>
+                        <select class="form-select" @bind="modelo.docente" disabled="@editando">
+                            <option value="">-- Seleccionar Docente --</option>
+                            @foreach (var docente in listadoDocentes)
+                            {
+                                <option value="@docente["cedula"]">@docente["nombres"] @docente["apellidos"]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Departamento *</label>
+                        <input class="form-control" type="number" @bind="modelo.departamento" disabled="@editando" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Dedicación</label>
+                        <input class="form-control" @bind="modelo.dedicacion" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Modalidad</label>
+                        <input class="form-control" @bind="modelo.modalidad" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha Ingreso</label>
+                        <input class="form-control" type="date" @bind="modelo.fecha_ingreso" @bind:format="yyyy-MM-dd" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha Fin</label>
+                        <input class="form-control" type="date" @bind="modelo.fecha_salida" @bind:format="yyyy-MM-dd" />
+                    </div>
+                </div>
+                <button class="btn btn-success me-2" @onclick="GuardarRegistro">Guardar</button>
+                <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    }
+
+    @if (cargando)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+
+    @if (!cargando && registros.Any())
+    {
+        <table class="table table-striped table-hover table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>Docente</th>
+                    <th>Departamento</th>
+                    <th>Dedicación</th>
+                    <th>Modalidad</th>
+                    <th>Fecha Ingreso</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var reg in registros)
+                {
+                    <tr>
+                        <td>@ObtenerNombreDocente(Convert.ToInt32(reg["docente"]))</td>
+                        <td>@reg["departamento"]</td>
+                        <td>@reg["dedicacion"]</td>
+                        <td>@reg["modalidad"]</td>
+                        <td>@reg["fecha_ingreso"]</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarRegistro(reg)">
+                                Editar
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRegistro(reg)">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (!cargando && !registros.Any())
+    {
+        <div class="alert alert-warning">No se encontraron registros.</div>
+    }
+</div>
+
+@code {
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> listadoDocentes = new();
+    private bool cargando = true;
+    private bool mostrarFormulario = false;
+    private bool editando = false;
+    private string mensaje = string.Empty;
+    private bool exito = false;
+
+    private DocenteDepartamentoModel modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        registros = await Api.ListarAsync("docente_departamento", null);
+        listadoDocentes = await Api.ListarAsync("docente", null);
+        cargando = false;
+    }
+
+    private void NuevoRegistro()
+    {
+        modelo = new DocenteDepartamentoModel();
+        editando = false;
+        mostrarFormulario = true;
+    }
+
+    private void EditarRegistro(Dictionary<string, object?> reg)
+    {
+        modelo = new DocenteDepartamentoModel
+        {
+            docente = reg["docente"]?.ToString() ?? "",
+            departamento = Convert.ToInt32(reg["departamento"]),
+            dedicacion = reg["dedicacion"]?.ToString() ?? "",
+            modalidad = reg["modalidad"]?.ToString() ?? "",
+            fecha_ingreso = reg["fecha_ingreso"] != null ? Convert.ToDateTime(reg["fecha_ingreso"]) : null,
+            fecha_salida = reg["fecha_salida"] != null ? Convert.ToDateTime(reg["fecha_salida"]) : null
+        };
+        editando = true;
+        mostrarFormulario = true;
+    }
+
+    private async Task GuardarRegistro()
+    {
+        var datos = new Dictionary<string, object?>
+        {
+            { "docente", int.Parse(modelo.docente) },
+            { "departamento", modelo.departamento },
+            { "dedicacion", modelo.dedicacion },
+            { "modalidad", modelo.modalidad },
+            { "fecha_ingreso", modelo.fecha_ingreso?.ToString("yyyy-MM-dd") },
+            { "fecha_salida", modelo.fecha_salida?.ToString("yyyy-MM-dd") }
+        };
+
+        if (editando)
+        {
+            (exito, mensaje) = await Api.ActualizarAsync("docente_departamento", "docente", modelo.docente, datos);
+        }
+        else
+        {
+            (exito, mensaje) = await Api.CrearAsync("docente_departamento", datos);
+        }
+
+        if (exito)
+        {
+            Cancelar();
+            await CargarDatos();
+        }
+    }
+
+    private async Task EliminarRegistro(Dictionary<string, object?> reg)
+    {
+        var docente = Convert.ToInt32(reg["docente"]);
+        var departamento = Convert.ToInt32(reg["departamento"]);
+        if (!await ConfirmarEliminacion()) return;
+
+        (exito, mensaje) = await Api.EliminarAsync("docente_departamento", "docente", docente.ToString());
+        await CargarDatos();
+    }
+
+    private void Cancelar()
+    {
+        mostrarFormulario = false;
+        modelo = new DocenteDepartamentoModel();
+    }
+
+    private Task<bool> ConfirmarEliminacion() => Task.FromResult(true);
+
+    private string ObtenerNombreDocente(int cedula)
+    {
+        var docente = listadoDocentes.FirstOrDefault(d => Convert.ToInt32(d["cedula"]) == cedula);
+        return docente != null ? $"{docente["nombres"]} {docente["apellidos"]}" : cedula.ToString();
+    }
+
+    private class DocenteDepartamentoModel
+    {
+        public string docente { get; set; } = "";
+        public int departamento { get; set; }
+        public string dedicacion { get; set; } = "";
+        public string modalidad { get; set; } = "";
+        public DateTime? fecha_ingreso { get; set; }
+        public DateTime? fecha_salida { get; set; }
+    }
+}
