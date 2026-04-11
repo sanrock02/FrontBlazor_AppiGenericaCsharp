@@ -19,6 +19,7 @@ builder.Services.AddScoped(sp =>
 
 // Registrar el servicio generico de la API
 builder.Services.AddScoped<FrontBlazor_AppiGenericaCsharp.Services.ApiService>();
+builder.Services.AddScoped<FrontBlazor_AppiGenericaCsharp.Services.SpService>();
 
 var app = builder.Build();
 
