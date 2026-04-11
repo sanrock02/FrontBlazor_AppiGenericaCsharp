@@ -1,0 +1,235 @@
+@page "/experiencia"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<PageTitle>Experiencias</PageTitle>
+
+<div class="container mt-4">
+    <h3>Gestión de Experiencias</h3>
+
+    @* ───────── ALERTA DE EXITO O ERROR ───────── *@
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <div class="alert @(exito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+            @mensaje
+            <button type="button" class="btn-close" @onclick="() => mensaje = string.Empty"></button>
+        </div>
+    }
+
+    @* ───────── BOTON PARA MOSTRAR FORMULARIO DE CREAR ───────── *@
+    @if (!mostrarFormulario)
+    {
+        <button class="btn btn-primary mb-3" @onclick="NuevoRegistro">Nueva Experiencia</button>
+    }
+
+    @* ───────── FORMULARIO (CREAR / EDITAR) ───────── *@
+    @if (mostrarFormulario)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @(editando ? "Editar Experiencia" : "Nueva Experiencia")
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @if (editando)
+                    {
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ID</label>
+                            <input class="form-control" type="number" @bind="modelo.id" disabled="true" />
+                        </div>
+                    }
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Nombre del Cargo</label>
+                        <input class="form-control" @bind="modelo.nombre_cargo" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Institución</label>
+                        <input class="form-control" @bind="modelo.institucion" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tipo</label>
+                        <input class="form-control" @bind="modelo.tipo" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha Inicio</label>
+                        <input class="form-control" type="date" @bind="modelo.fecha_inicio" @bind:format="yyyy-MM-dd" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha Fin</label>
+                        <input class="form-control" type="date" @bind="modelo.fecha_fin" @bind:format="yyyy-MM-dd" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Docente</label>
+                        <select class="form-select" @bind="modelo.docente">
+                            <option value="">-- Seleccionar Docente --</option>
+                            @foreach (var docente in listadoDocentes)
+                            {
+                                <option value="@docente["cedula"]">@docente["nombres"] @docente["apellidos"]</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-success me-2" @onclick="GuardarRegistro">Guardar</button>
+                <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    }
+
+    @* ───────── SPINNER DE CARGA ───────── *@
+    @if (cargando)
+    {
+        <div class="d-flex justify-content-center my-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    }
+
+    @* ───────── TABLA DE REGISTROS ───────── *@
+    @if (!cargando && registros.Any())
+    {
+        <table class="table table-striped table-hover table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Cargo</th>
+                    <th>Institución</th>
+                    <th>Tipo</th>
+                    <th>Fecha Inicio</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var reg in registros)
+                {
+                    <tr>
+                        <td>@reg["id"]</td>
+                        <td>@reg["nombre_cargo"]</td>
+                        <td>@reg["institucion"]</td>
+                        <td>@reg["tipo"]</td>
+                        <td>@reg["fecha_inicio"]</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarRegistro(reg)">
+                                Editar
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRegistro(reg)">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @* ───────── MENSAJE CUANDO NO HAY DATOS ───────── *@
+    @if (!cargando && !registros.Any())
+    {
+        <div class="alert alert-warning">No se encontraron registros.</div>
+    }
+</div>
+
+@code {
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> listadoDocentes = new();
+    private bool cargando = true;
+    private bool mostrarFormulario = false;
+    private bool editando = false;
+    private string mensaje = string.Empty;
+    private bool exito = false;
+
+    private ExperienciaModel modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        registros = await Api.ListarAsync("experiencia", null);
+        listadoDocentes = await Api.ListarAsync("docente", null);
+        cargando = false;
+    }
+
+    private void NuevoRegistro()
+    {
+        modelo = new ExperienciaModel();
+        editando = false;
+        mostrarFormulario = true;
+    }
+
+    private void EditarRegistro(Dictionary<string, object?> reg)
+    {
+        modelo = new ExperienciaModel
+        {
+            id = Convert.ToInt32(reg["id"]),
+            nombre_cargo = reg["nombre_cargo"]?.ToString() ?? "",
+            institucion = reg["institucion"]?.ToString() ?? "",
+            tipo = reg["tipo"]?.ToString() ?? "",
+            fecha_inicio = reg["fecha_inicio"] != null ? Convert.ToDateTime(reg["fecha_inicio"]) : null,
+            fecha_fin = reg["fecha_fin"] != null ? Convert.ToDateTime(reg["fecha_fin"]) : null,
+            docente = reg["docente"]?.ToString() ?? ""
+        };
+        editando = true;
+        mostrarFormulario = true;
+    }
+
+    private async Task GuardarRegistro()
+    {
+        var datos = new Dictionary<string, object?>
+        {
+            { "nombre_cargo", modelo.nombre_cargo },
+            { "institucion", modelo.institucion },
+            { "tipo", modelo.tipo },
+            { "fecha_inicio", modelo.fecha_inicio?.ToString("yyyy-MM-dd") },
+            { "fecha_fin", modelo.fecha_fin?.ToString("yyyy-MM-dd") },
+            { "docente", int.Parse(modelo.docente) }
+        };
+
+        if (editando)
+        {
+            datos.Add("id", modelo.id);
+            (exito, mensaje) = await Api.ActualizarAsync("experiencia", "id", modelo.id.ToString(), datos);
+        }
+        else
+        {
+            (exito, mensaje) = await Api.CrearAsync("experiencia", datos);
+        }
+
+        if (exito)
+        {
+            Cancelar();
+            await CargarDatos();
+        }
+    }
+
+    private async Task EliminarRegistro(Dictionary<string, object?> reg)
+    {
+        var id = Convert.ToInt32(reg["id"]);
+        if (!await ConfirmarEliminacion()) return;
+
+        (exito, mensaje) = await Api.EliminarAsync("experiencia", "id", id.ToString());
+        await CargarDatos();
+    }
+
+    private void Cancelar()
+    {
+        mostrarFormulario = false;
+        modelo = new ExperienciaModel();
+    }
+
+    private Task<bool> ConfirmarEliminacion() => Task.FromResult(true);
+
+    private class ExperienciaModel
+    {
+        public int id { get; set; }
+        public string nombre_cargo { get; set; } = "";
+        public string institucion { get; set; } = "";
+        public string tipo { get; set; } = "";
+        public DateTime? fecha_inicio { get; set; }
+        public DateTime? fecha_fin { get; set; }
+        public string docente { get; set; } = "";
+    }
+}
