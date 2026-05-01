@@ -72,7 +72,7 @@ namespace FrontBlazor_AppiGenericaCsharp.Services
             }
             catch (HttpRequestException ex)
             {
-                return (false, new(), $"Error de conexion: {ex.Message});
+                return (false, new(), $"Error de conexion: {ex.Message}");
             }
         }
 
