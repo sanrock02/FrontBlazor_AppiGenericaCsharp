@@ -1,0 +1,168 @@
+@page "/intereses-futuros"
+@rendermode InteractiveServer
+@using FrontBlazor_AppiGenericaCsharp.Services
+@inject ApiService Api
+@inject IJSRuntime JS
+
+<PageTitle>Intereses Futuros</PageTitle>
+
+<div class="container mt-4">
+    <h3>Intereses Futuros de Investigación</h3>
+
+    @* ───────── FORMULARIO ───────── *@
+    @if (mostrarFormulario)
+    {
+        <div class="card p-3 mb-3 shadow-sm border-primary">
+            <h5>@(editando ? "Editar Interés" : "Asignar Nuevo Interés")</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Docente</label>
+                    <select class="form-select" @bind="campoDocente" disabled="@editando">
+                        <option value="">-- Seleccione Docente --</option>
+                        @foreach (var d in listaDocentes)
+                        {
+                            <option value="@d["cedula"]">@d["nombres"] @d["apellidos"]</option>
+                        }
+                    </select>
+                    @if(editando){ <small class="text-muted">La cédula no se puede editar en este modo.</small> }
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Término Clave</label>
+                    <select class="form-select" @bind="campoTermino">
+                        <option value="">-- Seleccione Término --</option>
+                        @foreach (var t in listaTerminos)
+                        {
+                            <option value="@t["termino"]">@t["termino"]</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-success" @onclick="Guardar"> Guardar</button>
+                <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <button class="btn btn-primary mb-3" @onclick="NuevoRegistro">Asignar Nuevo Interés</button>
+    }
+
+    @* ───────── TABLA ───────── *@
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>Docente</th>
+                <th>Término de Interés</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in registros)
+            {
+                <tr>
+                    <td>@ObtenerNombreDocente(item["docente"]?.ToString())</td>
+                    <td>@item["termino_clave"]</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm me-1" @onclick="() => PrepararEdicion(item)">Editar</button>
+                        <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(item)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> listaDocentes = new();
+    private List<Dictionary<string, object?>> listaTerminos = new();
+    
+    private bool mostrarFormulario = false;
+    private bool editando = false;
+    
+    private string campoDocente = "";
+    private string campoTermino = "";
+    private string idOriginal = ""; // Para saber qué registro estamos editando
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        listaDocentes = await Api.ListarAsync("docente");
+        listaTerminos = await Api.ListarAsync("termino_clave");
+        registros = await Api.ListarAsync("intereses_futuros");
+    }
+
+    private string ObtenerNombreDocente(string? cedula)
+    {
+        if (string.IsNullOrEmpty(cedula)) return "N/A";
+        var docente = listaDocentes.FirstOrDefault(d => d["cedula"]?.ToString() == cedula);
+        return docente != null ? $"{docente["nombres"]} {docente["apellidos"]}" : cedula;
+    }
+
+    private void NuevoRegistro()
+    {
+        campoDocente = "";
+        campoTermino = "";
+        editando = false;
+        mostrarFormulario = true;
+    }
+
+    private void PrepararEdicion(Dictionary<string, object?> item)
+    {
+        campoDocente = item["docente"]?.ToString() ?? "";
+        campoTermino = item["termino_clave"]?.ToString() ?? "";
+        idOriginal = campoDocente; // Guardamos la cédula para el WHERE del UPDATE
+        editando = true;
+        mostrarFormulario = true;
+    }
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrEmpty(campoDocente) || string.IsNullOrEmpty(campoTermino)) return;
+
+        var datos = new Dictionary<string, object?> {
+            ["docente"] = int.Parse(campoDocente),
+            ["termino_clave"] = campoTermino
+        };
+        
+        if (editando)
+        {
+            // Usamos la lógica de no enviar el ID (cédula) dentro del diccionario datos si es llave primaria
+            var res = await Api.ActualizarAsync("intereses_futuros", "docente", idOriginal, datos);
+            if (res.exito) await FinalizarOperacion();
+        }
+        else
+        {
+            var res = await Api.CrearAsync("intereses_futuros", datos);
+            if (res.exito) await FinalizarOperacion();
+        }
+    }
+
+    private async Task FinalizarOperacion()
+    {
+        mostrarFormulario = false;
+        editando = false;
+        await CargarDatos();
+    }
+
+    private void Cancelar()
+    {
+        mostrarFormulario = false;
+        editando = false;
+    }
+
+    private async Task Eliminar(Dictionary<string, object?> item)
+    {
+        bool confirm = await JS.InvokeAsync<bool>("confirm", "¿Eliminar este interés?");
+        if (confirm)
+        {
+            var res = await Api.EliminarAsync("intereses_futuros", "docente", item["docente"]?.ToString() ?? "");
+            if (res.exito) await CargarDatos();
+        }
+    }
+}

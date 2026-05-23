@@ -1,0 +1,211 @@
+@page "/aliado"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<PageTitle>Aliados</PageTitle>
+
+<div class="container mt-4">
+    <h3>Gestión de Aliados</h3>
+
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <div class="alert @(exito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+            @mensaje
+            <button type="button" class="btn-close" @onclick="() => mensaje = string.Empty"></button>
+        </div>
+    }
+
+    @if (!mostrarFormulario)
+    {
+        <button class="btn btn-primary mb-3" @onclick="NuevoRegistro">Nuevo Aliado</button>
+    }
+
+    @if (mostrarFormulario)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @(editando ? "Editar Aliado" : "Nuevo Aliado")
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">NIT *</label>
+                        <input class="form-control" type="number" @bind="modelo.nit" disabled="@editando" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Razón Social *</label>
+                        <input class="form-control" type="text" @bind="modelo.razon_social" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Nombre Contacto *</label>
+                        <input class="form-control" type="text" @bind="modelo.nombre_contacto" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Correo *</label>
+                        <input class="form-control" type="email" @bind="modelo.correo" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Teléfono *</label>
+                        <input class="form-control" type="text" @bind="modelo.telefono" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Ciudad *</label>
+                        <input class="form-control" type="text" @bind="modelo.ciudad" />
+                    </div>
+                </div>
+                <button class="btn btn-success me-2" @onclick="GuardarRegistro">Guardar</button>
+                <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    }
+
+    @if (cargando)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+
+    @if (!cargando && registros.Any())
+    {
+        <table class="table table-striped table-hover table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>NIT</th>
+                    <th>Razón Social</th>
+                    <th>Contacto</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                    <th>Ciudad</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var reg in registros)
+                {
+                    <tr>
+                        <td>@reg["nit"]</td>
+                        <td>@reg["razon_social"]</td>
+                        <td>@reg["nombre_contacto"]</td>
+                        <td>@reg["correo"]</td>
+                        <td>@reg["telefono"]</td>
+                        <td>@reg["ciudad"]</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarRegistro(reg)">
+                                Editar
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRegistro(reg)">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (!cargando && !registros.Any())
+    {
+        <div class="alert alert-warning">No se encontraron registros.</div>
+    }
+</div>
+
+@code {
+    private List<Dictionary<string, object?>> registros = new();
+    private bool cargando = true;
+    private bool mostrarFormulario = false;
+    private bool editando = false;
+    private string mensaje = string.Empty;
+    private bool exito = false;
+
+    private AliadoModel modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        registros = await Api.ListarAsync("aliado", null);
+        cargando = false;
+    }
+
+    private void NuevoRegistro()
+    {
+        modelo = new AliadoModel();
+        editando = false;
+        mostrarFormulario = true;
+    }
+
+    private void EditarRegistro(Dictionary<string, object?> reg)
+    {
+        modelo = new AliadoModel
+        {
+            nit = Convert.ToInt64(reg["nit"]),
+            razon_social = reg["razon_social"]?.ToString() ?? "",
+            nombre_contacto = reg["nombre_contacto"]?.ToString() ?? "",
+            correo = reg["correo"]?.ToString() ?? "",
+            telefono = reg["telefono"]?.ToString() ?? "",
+            ciudad = reg["ciudad"]?.ToString() ?? ""
+        };
+        editando = true;
+        mostrarFormulario = true;
+    }
+
+    private async Task GuardarRegistro()
+    {
+        var datos = new Dictionary<string, object?>
+        {
+            { "nit", modelo.nit },
+            { "razon_social", modelo.razon_social },
+            { "nombre_contacto", modelo.nombre_contacto },
+            { "correo", modelo.correo },
+            { "telefono", modelo.telefono },
+            { "ciudad", modelo.ciudad }
+        };
+
+        if (editando)
+        {
+            (exito, mensaje) = await Api.ActualizarAsync("aliado", "nit", modelo.nit.ToString(), datos);
+        }
+        else
+        {
+            (exito, mensaje) = await Api.CrearAsync("aliado", datos);
+        }
+
+        if (exito)
+        {
+            Cancelar();
+            await CargarDatos();
+        }
+    }
+
+    private async Task EliminarRegistro(Dictionary<string, object?> reg)
+    {
+        var nit = Convert.ToInt64(reg["nit"]);
+        if (!await ConfirmarEliminacion()) return;
+
+        (exito, mensaje) = await Api.EliminarAsync("aliado", "nit", nit.ToString());
+        await CargarDatos();
+    }
+
+    private void Cancelar()
+    {
+        mostrarFormulario = false;
+        modelo = new AliadoModel();
+    }
+
+    private Task<bool> ConfirmarEliminacion() => Task.FromResult(true);
+
+    private class AliadoModel
+    {
+        public long nit { get; set; }
+        public string razon_social { get; set; } = "";
+        public string nombre_contacto { get; set; } = "";
+        public string correo { get; set; } = "";
+        public string telefono { get; set; } = "";
+        public string ciudad { get; set; } = "";
+    }
+}

@@ -1,0 +1,214 @@
+@page "/beca"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<PageTitle>Becas</PageTitle>
+
+<div class="container mt-4">
+    <h3>Gestión de Becas</h3>
+
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <div class="alert @(exito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+            @mensaje
+            <button type="button" class="btn-close" @onclick="() => mensaje = string.Empty"></button>
+        </div>
+    }
+
+    @if (!mostrarFormulario)
+    {
+        <button class="btn btn-primary mb-3" @onclick="NuevoRegistro">Nueva Beca</button>
+    }
+
+    @if (mostrarFormulario)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @(editando ? "Editar Beca" : "Nueva Beca")
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Estudio *</label>
+                        <select class="form-select" @bind="modelo.estudios" disabled="@editando">
+                            <option value="">-- Seleccionar Estudio --</option>
+                            @foreach (var estudio in listadoEstudios)
+                            {
+                                <option value="@estudio["id"]">@estudio["titulo"]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tipo</label>
+                        <input class="form-control" @bind="modelo.tipo" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Institución</label>
+                        <input class="form-control" @bind="modelo.institucion" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha Inicio</label>
+                        <input class="form-control" type="date" @bind="modelo.fecha_inicio" @bind:format="yyyy-MM-dd" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha Fin</label>
+                        <input class="form-control" type="date" @bind="modelo.fecha_fin" @bind:format="yyyy-MM-dd" />
+                    </div>
+                </div>
+                <button class="btn btn-success me-2" @onclick="GuardarRegistro">Guardar</button>
+                <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    }
+
+    @if (cargando)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+
+    @if (!cargando && registros.Any())
+    {
+        <table class="table table-striped table-hover table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>Estudio</th>
+                    <th>Tipo</th>
+                    <th>Institución</th>
+                    <th>Fecha Inicio</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var reg in registros)
+                {
+                    <tr>
+                        <td>@ObtenerTituloEstudio(Convert.ToInt32(reg["estudios"]))</td>
+                        <td>@reg["tipo"]</td>
+                        <td>@reg["institucion"]</td>
+                        <td>@reg["fecha_inicio"]</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarRegistro(reg)">
+                                Editar
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRegistro(reg)">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (!cargando && !registros.Any())
+    {
+        <div class="alert alert-warning">No se encontraron registros.</div>
+    }
+</div>
+
+@code {
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> listadoEstudios = new();
+    private bool cargando = true;
+    private bool mostrarFormulario = false;
+    private bool editando = false;
+    private string mensaje = string.Empty;
+    private bool exito = false;
+
+    private BecaModel modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        registros = await Api.ListarAsync("beca", null);
+        listadoEstudios = await Api.ListarAsync("estudios_realizados", null);
+        cargando = false;
+    }
+
+    private void NuevoRegistro()
+    {
+        modelo = new BecaModel();
+        editando = false;
+        mostrarFormulario = true;
+    }
+
+    private void EditarRegistro(Dictionary<string, object?> reg)
+    {
+        modelo = new BecaModel
+        {
+            estudios = reg["estudios"]?.ToString() ?? "",
+            tipo = reg["tipo"]?.ToString() ?? "",
+            institucion = reg["institucion"]?.ToString() ?? "",
+            fecha_inicio = reg["fecha_inicio"] != null ? Convert.ToDateTime(reg["fecha_inicio"]) : null,
+            fecha_fin = reg["fecha_fin"] != null ? Convert.ToDateTime(reg["fecha_fin"]) : null
+        };
+        editando = true;
+        mostrarFormulario = true;
+    }
+
+    private async Task GuardarRegistro()
+    {
+        var datos = new Dictionary<string, object?>
+        {
+            { "estudios", int.Parse(modelo.estudios) },
+            { "tipo", modelo.tipo },
+            { "institucion", modelo.institucion },
+            { "fecha_inicio", modelo.fecha_inicio?.ToString("yyyy-MM-dd") },
+            { "fecha_fin", modelo.fecha_fin?.ToString("yyyy-MM-dd") }
+        };
+
+        if (editando)
+        {
+            (exito, mensaje) = await Api.ActualizarAsync("beca", "estudios", modelo.estudios, datos);
+        }
+        else
+        {
+            (exito, mensaje) = await Api.CrearAsync("beca", datos);
+        }
+
+        if (exito)
+        {
+            Cancelar();
+            await CargarDatos();
+        }
+    }
+
+    private async Task EliminarRegistro(Dictionary<string, object?> reg)
+    {
+        var estudios = Convert.ToInt32(reg["estudios"]);
+        if (!await ConfirmarEliminacion()) return;
+
+        (exito, mensaje) = await Api.EliminarAsync("beca", "estudios", estudios.ToString());
+        await CargarDatos();
+    }
+
+    private void Cancelar()
+    {
+        mostrarFormulario = false;
+        modelo = new BecaModel();
+    }
+
+    private Task<bool> ConfirmarEliminacion() => Task.FromResult(true);
+
+    private string ObtenerTituloEstudio(int id)
+    {
+        var estudio = listadoEstudios.FirstOrDefault(e => Convert.ToInt32(e["id"]) == id);
+        return estudio?["titulo"]?.ToString() ?? id.ToString();
+    }
+
+    private class BecaModel
+    {
+        public string estudios { get; set; } = "";
+        public string tipo { get; set; } = "";
+        public string institucion { get; set; } = "";
+        public DateTime? fecha_inicio { get; set; }
+        public DateTime? fecha_fin { get; set; }
+    }
+}

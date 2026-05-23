@@ -1,0 +1,229 @@
+@page "/alianza"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<PageTitle>Alianzas</PageTitle>
+
+<div class="container mt-4">
+    <h3>Gestión de Alianzas</h3>
+
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <div class="alert @(exito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+            @mensaje
+            <button type="button" class="btn-close" @onclick="() => mensaje = string.Empty"></button>
+        </div>
+    }
+
+    @if (!mostrarFormulario)
+    {
+        <button class="btn btn-primary mb-3" @onclick="NuevoRegistro">Nueva Alianza</button>
+    }
+
+    @if (mostrarFormulario)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @(editando ? "Editar Alianza" : "Nueva Alianza")
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Aliado *</label>
+                        <select class="form-select" @bind="modelo.aliado" disabled="@editando">
+                            <option value="">-- Seleccionar Aliado --</option>
+                            @foreach (var aliado in listadoAliados)
+                            {
+                                <option value="@aliado["nit"]">@aliado["razon_social"]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Departamento *</label>
+                        <input class="form-control" type="number" @bind="modelo.departamento" disabled="@editando" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha Inicio</label>
+                        <input class="form-control" type="date" @bind="modelo.fecha_inicio" @bind:format="yyyy-MM-dd" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha Fin</label>
+                        <input class="form-control" type="date" @bind="modelo.fecha_fin" @bind:format="yyyy-MM-dd" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Docente (Opcional)</label>
+                        <select class="form-select" @bind="modelo.docente">
+                            <option value="">-- Sin Docente --</option>
+                            @foreach (var docente in listadoDocentes)
+                            {
+                                <option value="@docente["cedula"]">@docente["nombres"] @docente["apellidos"]</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-success me-2" @onclick="GuardarRegistro">Guardar</button>
+                <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    }
+
+    @if (cargando)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+
+    @if (!cargando && registros.Any())
+    {
+        <table class="table table-striped table-hover table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>Aliado</th>
+                    <th>Departamento</th>
+                    <th>Fecha Inicio</th>
+                    <th>Docente</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var reg in registros)
+                {
+                    <tr>
+                        <td>@ObtenerNombreAliado(Convert.ToInt64(reg["aliado"]))</td>
+                        <td>@reg["departamento"]</td>
+                        <td>@reg["fecha_inicio"]</td>
+                        <td>@(reg["docente"] != null ? ObtenerNombreDocente(Convert.ToInt32(reg["docente"])) : "-")</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarRegistro(reg)">
+                                Editar
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRegistro(reg)">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (!cargando && !registros.Any())
+    {
+        <div class="alert alert-warning">No se encontraron registros.</div>
+    }
+</div>
+
+@code {
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> listadoAliados = new();
+    private List<Dictionary<string, object?>> listadoDocentes = new();
+    private bool cargando = true;
+    private bool mostrarFormulario = false;
+    private bool editando = false;
+    private string mensaje = string.Empty;
+    private bool exito = false;
+
+    private AlianzaModel modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        registros = await Api.ListarAsync("alianza", null);
+        listadoAliados = await Api.ListarAsync("aliado", null);
+        listadoDocentes = await Api.ListarAsync("docente", null);
+        cargando = false;
+    }
+
+    private void NuevoRegistro()
+    {
+        modelo = new AlianzaModel();
+        editando = false;
+        mostrarFormulario = true;
+    }
+
+    private void EditarRegistro(Dictionary<string, object?> reg)
+    {
+        modelo = new AlianzaModel
+        {
+            aliado = reg["aliado"]?.ToString() ?? "",
+            departamento = Convert.ToInt32(reg["departamento"]),
+            fecha_inicio = reg["fecha_inicio"] != null ? Convert.ToDateTime(reg["fecha_inicio"]) : null,
+            fecha_fin = reg["fecha_fin"] != null ? Convert.ToDateTime(reg["fecha_fin"]) : null,
+            docente = reg["docente"]?.ToString() ?? ""
+        };
+        editando = true;
+        mostrarFormulario = true;
+    }
+
+    private async Task GuardarRegistro()
+    {
+        var datos = new Dictionary<string, object?>
+        {
+            { "aliado", long.Parse(modelo.aliado) },
+            { "departamento", modelo.departamento },
+            { "fecha_inicio", modelo.fecha_inicio?.ToString("yyyy-MM-dd") },
+            { "fecha_fin", modelo.fecha_fin?.ToString("yyyy-MM-dd") },
+            { "docente", string.IsNullOrEmpty(modelo.docente) ? null : int.Parse(modelo.docente) }
+        };
+
+        if (editando)
+        {
+            (exito, mensaje) = await Api.ActualizarAsync("alianza", "aliado", modelo.aliado, datos);
+        }
+        else
+        {
+            (exito, mensaje) = await Api.CrearAsync("alianza", datos);
+        }
+
+        if (exito)
+        {
+            Cancelar();
+            await CargarDatos();
+        }
+    }
+
+    private async Task EliminarRegistro(Dictionary<string, object?> reg)
+    {
+        var aliado = Convert.ToInt64(reg["aliado"]);
+        var departamento = Convert.ToInt32(reg["departamento"]);
+        if (!await ConfirmarEliminacion()) return;
+
+        (exito, mensaje) = await Api.EliminarAsync("alianza", "aliado", aliado.ToString());
+        await CargarDatos();
+    }
+
+    private void Cancelar()
+    {
+        mostrarFormulario = false;
+        modelo = new AlianzaModel();
+    }
+
+    private Task<bool> ConfirmarEliminacion() => Task.FromResult(true);
+
+    private string ObtenerNombreAliado(long nit)
+    {
+        var aliado = listadoAliados.FirstOrDefault(a => Convert.ToInt64(a["nit"]) == nit);
+        return aliado?["razon_social"]?.ToString() ?? nit.ToString();
+    }
+
+    private string ObtenerNombreDocente(int cedula)
+    {
+        var docente = listadoDocentes.FirstOrDefault(d => Convert.ToInt32(d["cedula"]) == cedula);
+        return docente != null ? $"{docente["nombres"]} {docente["apellidos"]}" : cedula.ToString();
+    }
+
+    private class AlianzaModel
+    {
+        public string aliado { get; set; } = "";
+        public int departamento { get; set; }
+        public DateTime? fecha_inicio { get; set; }
+        public DateTime? fecha_fin { get; set; }
+        public string docente { get; set; } = "";
+    }
+}

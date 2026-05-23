@@ -1,0 +1,77 @@
+@page "/login"
+@using Microsoft.AspNetCore.Components.Web
+@inject FrontBlazor_AppiGenericaCsharp.Services.AuthService AuthService
+@inject NavigationManager NavManager
+
+<div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="card p-4 shadow-lg" style="max-width: 400px; width: 100%; border-radius: 15px;">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold text-primary">Iniciar Sesión</h3>
+            <p class="text-muted">Ingresa tus credenciales de acceso</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(mensajeError))
+        {
+            <div class="alert alert-danger text-center" role="alert">
+                @mensajeError
+            </div>
+        }
+
+        @* EditForm con FormName estándar para procesamiento SSR puro en el servidor *@
+        <EditForm Model="@Model" OnValidSubmit="EjecutarIngreso" FormName="loginForm" method="post">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">Usuario (Email)</label>
+                @* Usamos InputText nativo de Blazor conectado a las propiedades del modelo *@
+                <InputText class="form-control" @bind-Value="Model.Usuario" placeholder="Ej: admin1@correo.com" required />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Contraseña</label>
+                <InputText type="password" class="form-control" @bind-Value="Model.Contrasena" placeholder="••••••••" required />
+            </div>
+
+            @* El botón DEBE ser type="submit" para que el navegador dispare la petición POST *@
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+                Ingresar
+            </button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    // SupplyParameterFromForm le dice a .NET 8 que llene este objeto 
+    // automáticamente con los datos que viajan en el POST del formulario
+    [SupplyParameterFromForm]
+    public LoginData Model { get; set; } = new();
+
+    private string? mensajeError;
+
+    private async Task EjecutarIngreso()
+    {
+        if (string.IsNullOrWhiteSpace(Model.Usuario) || string.IsNullOrWhiteSpace(Model.Contrasena))
+        {
+            mensajeError = "Por favor, escribe tus datos antes de ingresar.";
+            return;
+        }
+
+        // Le mandamos los strings capturados a tu AuthService
+        var resultado = await AuthService.LoginAsync(Model.Usuario, Model.Contrasena);
+
+        if (resultado.exito)
+        {
+            NavManager.NavigateTo("/"); 
+        }
+        else
+        {
+            mensajeError = resultado.mensaje;
+        }
+    }
+
+    public class LoginData
+    {
+        public string Usuario { get; set; } = string.Empty;
+        public string Contrasena { get; set; } = string.Empty;
+    }
+}

@@ -1,6 +1,11 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@inject FrontBlazor_AppiGenericaCsharp.Services.AuthService AuthService
+@inject NavigationManager NavManager
+
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">CRUD Facturas</a>
+        <a class="navbar-brand" href="">CRUD de gestión profesoral</a>
     </div>
 </div>
 
@@ -9,39 +14,167 @@
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
 
-        @* Link a la pagina de inicio *@
+        @* Link a la pagina de inicio - Visible para cualquiera *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
 
-        @* Links a las 6 tablas sin clave foranea *@
+        @* CONTROL DE AUTENTICACIÓN GLOBAL *@
+        <AuthorizeView>
+            <Authorized>
+                
+                @* Sección de Gestión de Datos - Visible para cualquier usuario logueado *@
+                <div class="nav-item px-3">
+                    <span class="nav-link">
+                        <span aria-hidden="true" class="ms-1">📋</span> Gestión de Datos
+                    </span>
+                </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="red">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Red
-            </NavLink>
-        </div>
-        @* 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="beca">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Beca
-            </NavLink>
-        </div>
-        @* 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="apoyoprofesoral">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Apoyo Profesoral
-            </NavLink>
-        </div>
+                @* Vistas permitidas tanto para Administrador como para el Rol limitado (Rol1) *@
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="docente">
+                        <span class="bi bi-person-fill" aria-hidden="true"></span> Docentes
+                    </NavLink>
+                </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="areaconocimiento">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Area de Conocimiento
-            </NavLink>
-        </div>
-        *@
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="red">
+                        <span class="bi bi-diagram-3" aria-hidden="true"></span> Redes
+                    </NavLink>
+                </div>
+
+               <AuthorizeView Roles="Administrador" Context="evaluacionContext">
+                    <Authorized>
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="red-docente">
+                        <span class="bi bi-link-45deg" aria-hidden="true"></span> Docentes en Redes
+                    </NavLink>
+                </div
+                    </Authorized>
+                </AuthorizeView>
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="experiencia">
+                        <span class="bi bi-briefcase" aria-hidden="true"></span> Experiencias
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="reconocimiento">
+                        <span class="bi bi-star-fill" aria-hidden="true"></span> Reconocimientos
+                    </NavLink>
+                </div>
+
+                @* 🔒 VISTA EXCLUSIVA: Evaluaciones (Solo Administrador) *@
+                <AuthorizeView Roles="Administrador" Context="evaluacionContext">
+                    <Authorized>
+                        <div class="nav-item px-3 ms-3">
+                            <NavLink class="nav-link" href="evaluacion-docente">
+                                <span class="bi bi-file-bar-graph" aria-hidden="true"></span> Evaluaciones
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                @* 🔒 VISTA EXCLUSIVA: Aliados (Solo Administrador) *@
+                <AuthorizeView Roles="Administrador" Context="aliadoContext">
+                    <Authorized>
+                        <div class="nav-item px-3 ms-3">
+                            <NavLink class="nav-link" href="aliado">
+                                <span class="bi bi-building" aria-hidden="true"></span> Aliados
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="docente-departamento">
+                        <span class="bi bi-building" aria-hidden="true"></span> Docente/Departamento
+                    </NavLink>
+                </div>
+
+                @* 🔒 VISTA EXCLUSIVA: Alianzas (Solo Administrador) *@
+                <AuthorizeView Roles="Administrador" Context="alianzaContext">
+                    <Authorized>
+                        <div class="nav-item px-3 ms-3">
+                            <NavLink class="nav-link" href="alianza">
+                                <span class="bi bi-handshake" aria-hidden="true"></span> Alianzas
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="estudios-realizados">
+                        <span class="bi bi-book" aria-hidden="true"></span> Estudios Realizados
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="estudio-ac">
+                        <span class="bi bi-bookmark-check" aria-hidden="true"></span> Estudio/Área Conocimiento
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="apoyo-profesoral">
+                        <span class="bi bi-hand-thumbs-up" aria-hidden="true"></span> Apoyo Profesoral
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="beca">
+                        <span class="bi bi-mortarboard" aria-hidden="true"></span> Becas
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="intereses-futuros">
+                        <span class="bi bi-lightbulb" aria-hidden="true"></span> Intereses Futuros
+                    </NavLink>
+                </div>
+
+                @* VISTA EXCLUSIVA: Panel de Administración (Solo Administrador) *@
+                <AuthorizeView Roles="Administrador" Context="adminContext">
+                    <Authorized>
+                        <div class="nav-item px-3 mt-2 text-warning fw-bold small">
+                            <span aria-hidden="true" class="ms-1">⚙️</span> SEGURIDAD
+                        </div>
+                        <div class="nav-item px-3 ms-3">
+                            <NavLink class="nav-link" href="admin/usuarios">
+                                <span class="bi bi-people-fill" aria-hidden="true"></span> Usuarios y Roles
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                @* Botón de Cerrar Sesión *@
+                <div class="nav-item px-3 mt-4 mb-3">
+                    <button class="btn btn-outline-danger w-100 text-start border-0 nav-link text-white" @onclick="CerrarSesion">
+                        <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Cerrar Sesión
+                    </button>
+                </div>
+
+            </Authorized>
+            
+            @* Si no está logueado, le muestra únicamente la opción de ingresar *@
+            <NotAuthorized>
+                <div class="nav-item px-3 mt-2">
+                    <NavLink class="nav-link text-success fw-bold" href="login">
+                        <span class="bi bi-person-badge-fill" aria-hidden="true"></span> Iniciar Sesión
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
         
     </nav>
 </div>
+
+@code {
+    private void CerrarSesion()
+    {
+        AuthService.Logout();
+        NavManager.NavigateTo("/login");
+    }
+}

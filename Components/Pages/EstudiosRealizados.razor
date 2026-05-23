@@ -1,0 +1,265 @@
+@page "/estudios-realizados"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<PageTitle>Estudios Realizados</PageTitle>
+
+<div class="container mt-4">
+    <h3>Gestión de Estudios Realizados</h3>
+
+    @* ───────── ALERTA ───────── *@
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <div class="alert @(exito ? "alert-success" : "alert-danger") alert-dismissible fade show">
+            @mensaje
+            <button type="button" class="btn-close" @onclick="() => mensaje = string.Empty"></button>
+        </div>
+    }
+
+    @* ───────── BOTON PARA FORMULARIO ───────── *@
+    @if (!mostrarFormulario)
+    {
+        <button class="btn btn-primary mb-3" @onclick="NuevoRegistro">Nuevo Estudio</button>
+    }
+
+    @* ───────── FORMULARIO ───────── *@
+    @if (mostrarFormulario)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @(editando ? "Editar Estudio" : "Nuevo Estudio")
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @if (editando)
+                    {
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">ID</label>
+                            <input class="form-control" type="number" @bind="modelo.id" disabled="true" />
+                        </div>
+                    }
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Título</label>
+                        <input class="form-control" @bind="modelo.titulo" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Universidad</label>
+                        <input class="form-control" @bind="modelo.universidad" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha</label>
+                        <input class="form-control" type="date" @bind="modelo.fecha" @bind:format="yyyy-MM-dd" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tipo</label>
+                        <input class="form-control" @bind="modelo.tipo" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Ciudad</label>
+                        <input class="form-control" @bind="modelo.ciudad" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">País</label>
+                        <input class="form-control" @bind="modelo.pais" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Metodología</label>
+                        <input class="form-control" @bind="modelo.metodologia" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Institución Acreditada</label>
+                        <select class="form-select" @bind="modelo.ins_acreditada">
+                            <option value="false">No</option>
+                            <option value="true">Sí</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Docente *</label>
+                        <select class="form-select" @bind="modelo.docente">
+                            <option value="">-- Seleccionar Docente --</option>
+                            @foreach (var docente in listadoDocentes)
+                            {
+                                <option value="@docente["cedula"]">@docente["nombres"] @docente["apellidos"]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Perfil del Egresado</label>
+                        <textarea class="form-control" rows="3" @bind="modelo.perfil_egresado"></textarea>
+                    </div>
+                </div>
+                <button class="btn btn-success me-2" @onclick="GuardarRegistro">Guardar</button>
+                <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    }
+
+    @* ───────── CARGA ───────── *@
+    @if (cargando)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+
+    @* ───────── TABLA ───────── *@
+    @if (!cargando && registros.Any())
+    {
+        <table class="table table-striped table-hover table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Universidad</th>
+                    <th>Tipo</th>
+                    <th>Fecha</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var reg in registros)
+                {
+                    <tr>
+                        <td>@reg["id"]</td>
+                        <td>@reg["titulo"]</td>
+                        <td>@reg["universidad"]</td>
+                        <td>@reg["tipo"]</td>
+                        <td>@reg["fecha"]</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm me-1" @onclick="() => EditarRegistro(reg)">
+                                Editar
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRegistro(reg)">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @* ───────── SIN DATOS ───────── *@
+    @if (!cargando && !registros.Any())
+    {
+        <div class="alert alert-warning">No se encontraron registros.</div>
+    }
+</div>
+
+@code {
+    private List<Dictionary<string, object?>> registros = new();
+    private List<Dictionary<string, object?>> listadoDocentes = new();
+    private bool cargando = true;
+    private bool mostrarFormulario = false;
+    private bool editando = false;
+    private string mensaje = string.Empty;
+    private bool exito = false;
+
+    private EstudioModel modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        registros = await Api.ListarAsync("estudios_realizados", null);
+        listadoDocentes = await Api.ListarAsync("docente", null);
+        cargando = false;
+    }
+
+    private void NuevoRegistro()
+    {
+        modelo = new EstudioModel();
+        editando = false;
+        mostrarFormulario = true;
+    }
+
+    private void EditarRegistro(Dictionary<string, object?> reg)
+    {
+        modelo = new EstudioModel
+        {
+            id = Convert.ToInt32(reg["id"]),
+            titulo = reg["titulo"]?.ToString() ?? "",
+            universidad = reg["universidad"]?.ToString() ?? "",
+            fecha = reg["fecha"] != null ? Convert.ToDateTime(reg["fecha"]) : null,
+            tipo = reg["tipo"]?.ToString() ?? "",
+            ciudad = reg["ciudad"]?.ToString() ?? "",
+            docente = reg["docente"]?.ToString() ?? "",
+            ins_acreditada = Convert.ToBoolean(reg["ins_acreditada"]).ToString(),
+            metodologia = reg["metodologia"]?.ToString() ?? "",
+            perfil_egresado = reg["perfil_egresado"]?.ToString() ?? "",
+            pais = reg["pais"]?.ToString() ?? ""
+        };
+        editando = true;
+        mostrarFormulario = true;
+    }
+
+    private async Task GuardarRegistro()
+    {
+        var datos = new Dictionary<string, object?>
+        {
+            { "titulo", modelo.titulo },
+            { "universidad", modelo.universidad },
+            { "fecha", modelo.fecha?.ToString("yyyy-MM-dd") },
+            { "tipo", modelo.tipo },
+            { "ciudad", modelo.ciudad },
+            { "docente", int.Parse(modelo.docente) },
+            { "ins_acreditada", bool.Parse(modelo.ins_acreditada) },
+            { "metodologia", modelo.metodologia },
+            { "perfil_egresado", modelo.perfil_egresado },
+            { "pais", modelo.pais }
+        };
+
+        if (editando)
+        {
+            datos.Add("id", modelo.id);
+            (exito, mensaje) = await Api.ActualizarAsync("estudios_realizados", "id", modelo.id.ToString(), datos);
+        }
+        else
+        {
+            datos.Add("id", modelo.id);
+            (exito, mensaje) = await Api.CrearAsync("estudios_realizados", datos);
+        }
+
+        if (exito)
+        {
+            Cancelar();
+            await CargarDatos();
+        }
+    }
+
+    private async Task EliminarRegistro(Dictionary<string, object?> reg)
+    {
+        var id = Convert.ToInt32(reg["id"]);
+        if (!await ConfirmarEliminacion()) return;
+
+        (exito, mensaje) = await Api.EliminarAsync("estudios_realizados", "id", id.ToString());
+        await CargarDatos();
+    }
+
+    private void Cancelar()
+    {
+        mostrarFormulario = false;
+        modelo = new EstudioModel();
+    }
+
+    private Task<bool> ConfirmarEliminacion() => Task.FromResult(true);
+
+    private class EstudioModel
+    {
+        public int id { get; set; }
+        public string titulo { get; set; } = "";
+        public string universidad { get; set; } = "";
+        public DateTime? fecha { get; set; }
+        public string tipo { get; set; } = "";
+        public string ciudad { get; set; } = "";
+        public string docente { get; set; } = "";
+        public string ins_acreditada { get; set; } = "false";
+        public string metodologia { get; set; } = "";
+        public string perfil_egresado { get; set; } = "";
+        public string pais { get; set; } = "";
+    }
+}

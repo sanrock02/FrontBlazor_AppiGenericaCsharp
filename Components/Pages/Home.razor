@@ -1,18 +1,59 @@
 @page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager NavManager
+@inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>CRUD Facturas</PageTitle>
+<PageTitle>CRUD Mapa de Conocimiento</PageTitle>
 
-<div class="container mt-4">
-    <h1>CRUD - Base de Datos Facturas</h1>
-    <p class="lead">
-        Frontend Blazor que consume la API generica
-        <strong>ApiGenericaCsharp</strong> para gestionar las tablas
-        de <code>bdfacturas_sqlserver_local</code>.
-    </p>
+<AuthorizeView>
+    <Authorized>
+        <div class="container mt-4">
+            <h1>CRUD del módulo de gestión profesoral</h1>
+            <p class="lead">
+                Frontend Blazor que consume la API genérica
+                <strong>ApiGenericaCsharp</strong> para gestionar las tablas
+                de <code>bdmapaconocimiento</code>.
+            </p>
 
-    <div class="alert alert-info">
-        <strong>Tablas disponibles:</strong> Empresa, Persona, Producto, Rol, Ruta, Usuario.
-        <br />
-        Use el menu lateral para navegar a cada tabla.
-    </div>
-</div>
+            <div class="alert alert-info">
+                <strong>Tablas disponibles:</strong> Empresa, Persona, Producto, Rol, Ruta, Usuario.
+                <br />
+                Use el menú lateral para navegar a cada tabla.
+            </div>
+
+            <div class="mt-4 text-muted small">
+                Sesión activa correctamente. Sus permisos han sido cargados según su rol asignado.
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="container mt-4 text-center">
+            <p class="text-muted">Redirigiendo al inicio de sesión...</p>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Forzamos a que la lógica de redirección ocurra ÚNICAMENTE en el navegador (lado cliente)
+        // y después de que el primer renderizado estático del servidor haya terminado.
+        if (firstRender)
+        {
+            if (AuthStateTask != null)
+            {
+                var authState = await AuthStateTask;
+                var usuario = authState.User;
+
+                if (usuario.Identity == null || !usuario.Identity.IsAuthenticated)
+                {
+                    // Redirección limpia libre de bucles de servidor
+                    NavManager.NavigateTo("/login", forceLoad: false);
+                }
+            }
+        }
+    }
+}
