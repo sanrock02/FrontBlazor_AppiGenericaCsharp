@@ -3,46 +3,50 @@
 @inject FrontBlazor_AppiGenericaCsharp.Services.AuthService AuthService
 @inject NavigationManager NavManager
 
-<div class="container d-flex justify-content-center align-items-center vh-100">
-    <div class="card p-4 shadow-lg" style="max-width: 400px; width: 100%; border-radius: 15px;">
+<div class="container-fluid d-flex justify-content-center align-items-center vh-100" 
+     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    
+    <div class="card p-4 p-md-5 shadow-2xl" 
+         style="max-width: 420px; width: 100%; border-radius: 24px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
+        
         <div class="text-center mb-4">
-            <h3 class="fw-bold text-primary">Iniciar Sesión</h3>
-            <p class="text-muted">Ingresa tus credenciales de acceso</p>
+            <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle mb-3" style="width: 60px; height: 60px;">
+                <i class="bi bi-shield-lock-fill fs-3"></i>
+            </div>
+            <h3 class="fw-extrabold text-dark tracking-tight mb-1" style="font-size: 1.75rem;">¡Bienvenido de nuevo!</h3>
+            <p class="text-muted small">Por favor, ingresa tus credenciales para continuar</p>
         </div>
 
         @if (!string.IsNullOrEmpty(mensajeError))
         {
-            <div class="alert alert-danger text-center" role="alert">
-                @mensajeError
+            <div class="alert alert-danger d-flex align-items-center justify-content-center rounded-3 border-0 py-2.5 mb-4" role="alert" style="background-color: #fde8e8; color: #9b1c1c;">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span class="small fw-medium">@mensajeError</span>
             </div>
         }
 
-        @* EditForm con FormName estándar para procesamiento SSR puro en el servidor *@
         <EditForm Model="@Model" OnValidSubmit="EjecutarIngreso" FormName="loginForm" method="post">
             <DataAnnotationsValidator />
 
-            <div class="mb-3">
-                <label class="form-label">Usuario (Email)</label>
-                @* Usamos InputText nativo de Blazor conectado a las propiedades del modelo *@
-                <InputText class="form-control" @bind-Value="Model.Usuario" placeholder="Ej: admin1@correo.com" required />
+            <div class="form-floating mb-3">
+                <InputText class="form-control rounded-3" id="floatingUsuario" @bind-Value="Model.Usuario" placeholder="Ej: admin1@correo.com" style="border: 1.5px solid #e5e7eb;" required />
+                <label for="floatingUsuario" class="text-muted"><i class="bi bi-envelope me-2"></i>Usuario (Email)</label>
             </div>
 
-            <div class="mb-4">
-                <label class="form-label">Contraseña</label>
-                <InputText type="password" class="form-control" @bind-Value="Model.Contrasena" placeholder="••••••••" required />
+            <div class="form-floating mb-4">
+                <InputText type="password" class="form-control rounded-3" id="floatingPassword" @bind-Value="Model.Contrasena" placeholder="••••••••" style="border: 1.5px solid #e5e7eb;" required />
+                <label for="floatingPassword" class="text-muted"><i class="bi bi-lock me-2"></i>Contraseña</label>
             </div>
 
-            @* El botón DEBE ser type="submit" para que el navegador dispare la petición POST *@
-            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
-                Ingresar
+            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm transition-all" 
+                    style="background: linear-gradient(to right, #4f46e5, #7c3aed); border: none; letter-spacing: 0.5px;">
+                Iniciar Sesión <i class="bi bi-arrow-right ms-2"></i>
             </button>
         </EditForm>
     </div>
 </div>
 
 @code {
-    // SupplyParameterFromForm le dice a .NET 8 que llene este objeto 
-    // automáticamente con los datos que viajan en el POST del formulario
     [SupplyParameterFromForm]
     public LoginData Model { get; set; } = new();
 
@@ -56,7 +60,6 @@
             return;
         }
 
-        // Le mandamos los strings capturados a tu AuthService
         var resultado = await AuthService.LoginAsync(Model.Usuario, Model.Contrasena);
 
         if (resultado.exito)
